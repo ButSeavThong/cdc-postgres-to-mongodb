@@ -1,20 +1,4 @@
 services:
-
-  cdc-oracle:
-    image: container-registry.oracle.com/database/express:21.3.0-xe
-    container_name: cdc-oracle
-    ports:
-      - "1521:1521"
-    environment:
-      ORACLE_PWD: Admin123
-      ORACLE_CHARACTERSET: AL32UTF8
-      ORACLE_EDITION: EXPRESS
-    volumes:
-      - ./init-scripts:/opt/oracle/scripts/startup
-      - oracle_data_cdc:/opt/oracle/oradata
-    networks:
-      - kafka-fullstack
-
   cdc-postgres:
     image: postgres:16
     container_name: cdc-postgres
@@ -29,6 +13,20 @@ services:
       - "wal_level=logical"
     volumes:
       - pg_data_cdc:/var/lib/postgresql/data
+    networks:
+      - kafka-fullstack
+
+  cdc-mongodb:
+    image: mongo:7
+    container_name: cdc-mongodb
+    ports:
+      - "11111:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongodb
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    volumes:
+      - mongodb_log:/var/log/mongodb
+      - mongo_data_cdc:/data/db
     networks:
       - kafka-fullstack
 
@@ -200,11 +198,10 @@ services:
     ports:
       - "8083:8083"
     environment:
-
       # Base Configuration
       GROUP_ID: cdc_connect-group
       BOOTSTRAP_SERVERS: "kafka-1:19093,kafka-2:19093,kafka-3:19093"
-
+      
       # Storage Topics Configuration
       CONFIG_STORAGE_TOPIC: cdc_connect_configs
       OFFSET_STORAGE_TOPIC: cdc_connect_offsets
@@ -212,12 +209,12 @@ services:
 
       # Make sure you set this for the correct path that the library files for InstantClient have been installed into
       LD_LIBRARY_PATH: '/usr/share/java/debezium-connector-oracle/instantclient_19_6/'
-      
       # Schema Registry Integration:
       KEY_CONVERTER: io.confluent.connect.avro.AvroConverter #### add when add avro schema registry
       VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter #### add when add avro schema registry
       CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081 #### add when add avro schema registry
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081 #### add when add avro schema registry
+
       # KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
       # VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       # CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
@@ -343,7 +340,8 @@ volumes:
   kafka_3_vol:
   kafka-ui-data:
   pg_data_cdc:
-  oracle_data_cdc:
+  mongo_data_cdc:
+  mongodb_log:
   debezium_plugins:
   debezium_data:
   schema_registry_data:
@@ -352,3 +350,5 @@ networks:
   kafka-fullstack:
     # external: true            # uncomment if you use external network
     # name: kafka-fullstack     # uncomment if you use external network
+
+    
